@@ -91,7 +91,7 @@ ErrorOr<void> ioctl(int, unsigned, ...)
 
 ErrorOr<void> mkdir(StringView path, mode_t mode)
 {
-    (void) mode;
+    (void)mode;
     int res = CreateDirectory(path.to_byte_string().characters(), {});
     if (res < 0)
         return Error::from_windows_error(GetLastError());
@@ -134,46 +134,52 @@ ErrorOr<ByteString> getcwd()
 
 ErrorOr<struct stat> stat(StringView path)
 {
-    (void) path;
-    TODO();
+    if (!path.characters_without_null_termination())
+        return Error::from_syscall("stat"sv, -EFAULT);
+
+    struct stat st = {};
+    ByteString path_string = path;
+    if (::stat(path_string.characters(), &st) < 0)
+        return Error::from_syscall("stat"sv, -errno);
+    return st;
 }
 
 ErrorOr<void> link(StringView old_path, StringView new_path)
 {
-    (void) old_path;
-    (void) new_path;
+    (void)old_path;
+    (void)new_path;
     TODO();
 }
 
 ErrorOr<void> symlink(StringView target, StringView link_path)
 {
-    (void) target;
-    (void) link_path;
+    (void)target;
+    (void)link_path;
     TODO();
 }
 
 ErrorOr<void> rename(StringView old_path, StringView new_path)
 {
-    (void) old_path;
-    (void) new_path;
+    (void)old_path;
+    (void)new_path;
     TODO();
 }
 
 ErrorOr<void> unlink(StringView path)
 {
-    (void) path;
+    (void)path;
     TODO();
 }
 
 ErrorOr<void> rmdir(StringView path)
 {
-    (void) path;
+    (void)path;
     TODO();
 }
 
 ErrorOr<ByteString> readlink(StringView pathname)
 {
-    (void) pathname;
+    (void)pathname;
     TODO();
 }
 

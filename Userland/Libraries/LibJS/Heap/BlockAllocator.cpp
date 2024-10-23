@@ -10,15 +10,15 @@
 #include <LibJS/Heap/BlockAllocator.h>
 #include <LibJS/Heap/HeapBlock.h>
 
+#ifdef AK_OS_WINDOWS
+#    include <windows.h>
+#else
+#    include <sys/mman.h>
+#endif
+
 #ifdef HAS_ADDRESS_SANITIZER
 #    include <sanitizer/asan_interface.h>
 #    include <sanitizer/lsan_interface.h>
-#endif
-
-#if defined(AK_OS_WINDOWS)
-#    include <Windows.h>
-#else
-#    include <sys/mman.h>
 #endif
 
 #if defined(AK_OS_GNU_HURD) || (!defined(MADV_FREE) && !defined(MADV_DONTNEED))
@@ -31,9 +31,17 @@ BlockAllocator::~BlockAllocator()
 {
     for (auto* block : m_blocks) {
         ASAN_UNPOISON_MEMORY_REGION(block, HeapBlock::block_size);
-        if (!VirtualFree(block, 0, MEM_RELEASE)) {
+#if !defined(AK_OS_WINDOWS)
+        if (munmap(block, HeapBlock::block_size) < 0) {
+            perror("munmap");
             VERIFY_NOT_REACHED();
         }
+#else
+        if (!VirtualFree(block, 0, MEM_RELEASE)) {
+            perror("VirtualFree");
+            VERIFY_NOT_REACHED();
+        }
+#endif
     }
 }
 
@@ -48,8 +56,13 @@ void* BlockAllocator::allocate_block([[maybe_unused]] char const* name)
         return block;
     }
 
+#ifdef AK_OS_WINDOWS
     auto* block = (HeapBlock*)VirtualAlloc(nullptr, HeapBlock::block_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    VERIFY(block != nullptr);
+    VERIFY(block);
+#else
+    auto* block = (HeapBlock*)mmap(nullptr, HeapBlock::block_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    VERIFY(block != MAP_FAILED);
+#endif
     LSAN_REGISTER_ROOT_REGION(block, HeapBlock::block_size);
     return block;
 }
@@ -58,9 +71,20 @@ void BlockAllocator::deallocate_block(void* block)
 {
     VERIFY(block);
 
-#if defined(USE_FALLBACK_BLOCK_DEALLOCATION)
-    // If we can't use any of the nicer techniques, unmap and remap the block to return the physical pages while keeping the VM.
-    if (!VirtualFree(block, HeapBlock::block_size, MEM_DECOMMIT)) {
+#if defined(AK_OS_WINDOWS)
+    if (!VirtualFree(block, 0, MEM_RELEASE)) {
+        perror("VirtualFree");
+        VERIFY_NOT_REACHED();
+    }
+    block = VirtualAlloc(block, HeapBlock::block_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    VERIFY(block);
+#elif defined(USE_FALLBACK_BLOCK_DEALLOCATION)
+    if (munmap(block, HeapBlock::block_size) < 0) {
+        perror("munmap");
+        VERIFY_NOT_REACHED();
+    }
+    if (mmap(block, HeapBlock::block_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0) != block) {
+        perror("mmap");
         VERIFY_NOT_REACHED();
     }
 #elif defined(MADV_FREE)

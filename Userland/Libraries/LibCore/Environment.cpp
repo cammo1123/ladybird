@@ -125,10 +125,12 @@ ErrorOr<void> set(StringView name, StringView value, Overwrite overwrite)
     if (rc < 0)
         return Error::from_errno(errno);
 #else
-    (void)c_name;
-    (void)c_value;
-    (void)overwrite;
-    dbgln("ErrorOr<void> set(StringView name, StringView value, Overwrite overwrite)");
+    if (overwrite == Overwrite::No && getenv(c_name) != nullptr)
+        return {};
+    
+    auto rc = _putenv_s(c_name, c_value);
+    if (rc != 0)
+        return Error::from_errno(errno);
 #endif
     return {};
 }
