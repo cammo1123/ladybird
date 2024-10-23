@@ -8,3 +8,4 @@ set(SOURCES
 
 serenity_lib(LibLine line)
 target_link_libraries(LibLine PRIVATE LibCore LibUnicode)
+set(WINDOWS_EXPORT_ALL_SYMBOLS on)

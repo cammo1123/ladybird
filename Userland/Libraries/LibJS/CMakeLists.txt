@@ -284,5 +284,9 @@ if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "i.86.*")
     target_link_libraries(LibJS PRIVATE atomic)
 endif()
 
+if (WIN32)
+    target_link_libraries(AK PUBLIC Dbghelp.lib)
+endif()
+
 target_compile_options(LibJS PRIVATE -fno-omit-frame-pointer)
 target_link_libraries(LibJS PUBLIC JSClangPlugin)

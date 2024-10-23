@@ -7,7 +7,11 @@
 #include "Directory.h"
 #include "DirIterator.h"
 #include "System.h"
-#include <dirent.h>
+
+#if defined(AK_OS_WINDOWS)
+#    include <corecrt_io.h>
+#    include <windows.h>
+#endif
 
 namespace Core {
 
@@ -31,6 +35,7 @@ Directory::~Directory()
         MUST(System::close(m_directory_fd));
 }
 
+#if !defined(AK_OS_WINDOWS)
 ErrorOr<void> Directory::chown(uid_t uid, gid_t gid)
 {
     if (m_directory_fd == -1)
@@ -38,6 +43,7 @@ ErrorOr<void> Directory::chown(uid_t uid, gid_t gid)
     TRY(Core::System::fchown(m_directory_fd, uid, gid));
     return {};
 }
+#endif
 
 ErrorOr<bool> Directory::is_valid_directory(int fd)
 {
@@ -62,9 +68,26 @@ ErrorOr<Directory> Directory::create(LexicalPath path, CreateDirectories create_
 {
     if (create_directories == CreateDirectories::Yes)
         TRY(ensure_directory(path, creation_mode));
-    // FIXME: doesn't work on Linux probably
+        // FIXME: doesn't work on Linux probably
+#if !defined(AK_OS_WINDOWS)
     auto fd = TRY(System::open(path.string(), O_CLOEXEC));
     return adopt_fd(fd, move(path));
+#else
+    HANDLE hFolder = CreateFileA(
+        path.string().characters(), // Folder path as wide string
+        GENERIC_READ,               // Desired access (read access)
+        FILE_SHARE_READ,            // Share mode (allow others to read while the folder is open)
+        NULL,                       // Security attributes
+        OPEN_EXISTING,              // Open existing folder
+        FILE_FLAG_BACKUP_SEMANTICS, // Required flag for opening a directory
+        NULL                        // No template file
+    );
+
+    if (hFolder == INVALID_HANDLE_VALUE)
+        return Error::from_windows_error(GetLastError());
+
+    return adopt_fd(_open_osfhandle((intptr_t) hFolder, O_CLOEXEC), move(path));
+#endif
 }
 
 ErrorOr<void> Directory::ensure_directory(LexicalPath const& path, mode_t creation_mode)

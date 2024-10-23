@@ -123,6 +123,10 @@ if (NOT WIN32)
     add_cxx_link_options(-fstack-protector-strong)
 endif()
 
+if (WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
+
 if (NOT MSVC)
     add_cxx_compile_options(-fstrict-flex-arrays=2)
 endif()

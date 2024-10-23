@@ -12,7 +12,7 @@
 #include <LibCore/ThreadEventQueue.h>
 #include <LibThreading/Mutex.h>
 #include <errno.h>
-#include <pthread.h>
+#include "C:\Users\camer\src\ladybird\Build\ladybird\vcpkg_installed\x64-windows\include\pthread.h"
 
 namespace Core {
 

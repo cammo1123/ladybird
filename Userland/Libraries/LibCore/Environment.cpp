@@ -12,7 +12,7 @@
 
 #if defined(AK_OS_MACOS) || defined(AK_OS_IOS)
 #    include <crt_externs.h>
-#else
+#elif !defined(AK_OS_WINDOWS)
 extern "C" char** environ;
 #endif
 
@@ -93,8 +93,8 @@ Optional<StringView> get(StringView name, [[maybe_unused]] SecureOnly secure)
     builder.append('\0');
     // Note the explicit null terminators above.
 
-    // FreeBSD < 14, Android, and generic BSDs do not support secure_getenv.
-#if (defined(__FreeBSD__) && __FreeBSD__ >= 14) || (!defined(AK_OS_BSD_GENERIC) && !defined(AK_OS_ANDROID))
+    // FreeBSD < 14, Android, Windows, and generic BSDs do not support secure_getenv.
+#if (defined(__FreeBSD__) && __FreeBSD__ >= 14) || (!defined(AK_OS_BSD_GENERIC) && !defined(AK_OS_ANDROID) && !defined(AK_OS_WINDOWS))
     char* result;
     if (secure == SecureOnly::Yes) {
         result = ::secure_getenv(builder.string_view().characters_without_null_termination());
@@ -119,9 +119,17 @@ ErrorOr<void> set(StringView name, StringView value, Overwrite overwrite)
     // Note the explicit null terminators above.
     auto c_name = builder.string_view().characters_without_null_termination();
     auto c_value = c_name + name.length() + 1;
+
+#if !defined(AK_OS_WINDOWS)
     auto rc = ::setenv(c_name, c_value, overwrite == Overwrite::Yes ? 1 : 0);
     if (rc < 0)
         return Error::from_errno(errno);
+#else
+    (void)c_name;
+    (void)c_value;
+    (void)overwrite;
+    dbgln("ErrorOr<void> set(StringView name, StringView value, Overwrite overwrite)");
+#endif
     return {};
 }
 
@@ -131,10 +139,14 @@ ErrorOr<void> unset(StringView name)
     TRY(builder.try_append(name));
     TRY(builder.try_append('\0'));
 
+#if !defined(AK_OS_WINDOWS)
     // Note the explicit null terminator above.
     auto rc = ::unsetenv(builder.string_view().characters_without_null_termination());
     if (rc < 0)
         return Error::from_errno(errno);
+#else
+    dbgln("ErrorOr<void> unset(StringView name)");
+#endif
     return {};
 }
 
@@ -142,6 +154,10 @@ ErrorOr<void> put(StringView env)
 {
 #if defined(AK_OS_SERENITY)
     auto rc = ::serenity_putenv(env.characters_without_null_termination(), env.length());
+#elif defined(AK_OS_WINDOWS)
+    (void)env;
+    dbgln("ErrorOr<void> put(StringView env)");
+    auto rc = 0;
 #else
     // Leak somewhat unavoidable here due to the putenv API.
     auto leaked_new_env = strndup(env.characters_without_null_termination(), env.length());
@@ -161,6 +177,8 @@ ErrorOr<void> clear()
     for (size_t environ_size = 0; environment[environ_size]; ++environ_size) {
         environment[environ_size] = NULL;
     }
+#elif defined(AK_OS_WINDOWS)
+    dbgln("ErrorOr<void> clear()");
 #else
     auto rc = ::clearenv();
     if (rc < 0)

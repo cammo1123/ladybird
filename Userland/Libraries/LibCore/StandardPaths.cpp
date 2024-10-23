@@ -1,7 +1,6 @@
 /*
- * Copyright (c) 2020, Andreas Kling <andreas@ladybird.org>
+ * Copyright (c) 2020, Andreas Kling <kling@serenityos.org>
  * Copyright (c) 2023, Linus Groh <linusg@serenityos.org>
- * Copyright (c) 2024, Sam Atkins <sam@ladybird.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -13,12 +12,14 @@
 #include <AK/StringBuilder.h>
 #include <AK/StringUtils.h>
 #include <LibCore/Environment.h>
-#include <LibCore/SessionManagement.h>
 #include <LibCore/StandardPaths.h>
-#include <LibCore/System.h>
-#include <pwd.h>
 #include <stdlib.h>
-#include <unistd.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <LibCore/SessionManagement.h>
+#    include <pwd.h>
+#    include <unistd.h>
+#endif
 
 #if defined(AK_OS_HAIKU)
 #    include <FindDirectory.h>
@@ -36,12 +37,17 @@ static Optional<StringView> get_environment_if_not_empty(StringView name)
 
 ByteString StandardPaths::home_directory()
 {
+#if defined(AK_OS_WINDOWS)
+    auto* home_env = getenv("USERPROFILE");
+    ByteString path { home_env, strlen(home_env) };
+#else
     if (auto* home_env = getenv("HOME"))
         return LexicalPath::canonicalized_path(home_env);
 
     auto* pwd = getpwuid(getuid());
     ByteString path = pwd ? pwd->pw_dir : "/";
     endpwent();
+#endif
     return LexicalPath::canonicalized_path(path);
 }
 
@@ -180,6 +186,8 @@ ErrorOr<ByteString> StandardPaths::runtime_directory()
 #elif defined(AK_OS_LINUX)
     auto uid = getuid();
     builder.appendff("/run/user/{}", uid);
+#elif defined(AK_OS_WINDOWS)
+    builder.appendff("{}", getenv("TEMP"));
 #else
     // Just create a directory in /tmp that's owned by us with 0700
     auto uid = getuid();
@@ -200,7 +208,12 @@ ErrorOr<ByteString> StandardPaths::runtime_directory()
 
 ByteString StandardPaths::tempfile_directory()
 {
+#if defined(AK_OS_WINDOWS)
+    auto* temp = getenv("TEMP");
+    return ByteString { temp, strlen(temp) };
+#else
     return "/tmp";
+#endif
 }
 
 ErrorOr<Vector<String>> StandardPaths::font_directories()
@@ -225,10 +238,8 @@ ErrorOr<Vector<String>> StandardPaths::font_directories()
         "/System/Library/Fonts"_string,
         "/Library/Fonts"_string,
         TRY(String::formatted("{}/Library/Fonts"sv, home_directory())),
-#    elif defined(AK_OS_ANDROID)
-        // FIXME: We should be using the ASystemFontIterator NDK API here.
-        // There is no guarantee that this will continue to exist on future versions of Android.
-        "/system/fonts"_string,
+#    elif defined(AK_OS_WINDOWS)
+        "C:\\Windows\\Fonts"_string,
 #    else
         TRY(String::formatted("{}/fonts"sv, user_data_directory())),
         TRY(String::formatted("{}/X11/fonts"sv, user_data_directory())),

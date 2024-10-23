@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020, Andreas Kling <andreas@ladybird.org>
+ * Copyright (c) 2018-2020, Andreas Kling <kling@serenityos.org>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -14,6 +14,13 @@
 #include <LibUnicode/TimeZone.h>
 #include <errno.h>
 #include <time.h>
+
+#if defined(AK_OS_WINDOWS)
+#    define gmtime_r(src, dest) gmtime_s(dest, src)
+#    define localtime_r(src, dest) localtime_s(dest, src)
+#    define timegm _mkgmtime
+#    define tzname _tzname
+#endif
 
 namespace Core {
 
@@ -624,6 +631,7 @@ Optional<DateTime> DateTime::parse(StringView format, StringView string)
         localtime_r(&utc_time_t, &tm);
     }
 
+    // FIXME: On Windows the years cannot be greater than 3000
     return DateTime::from_timestamp(mktime(&tm));
 }
 

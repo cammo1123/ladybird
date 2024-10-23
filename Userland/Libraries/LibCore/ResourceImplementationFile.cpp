@@ -29,8 +29,12 @@ ErrorOr<NonnullRefPtr<Resource>> ResourceImplementationFile::load_from_resource_
 
     auto st = TRY(System::stat(full_path));
 
+#if !defined(AK_OS_WINDOWS)
     if (S_ISDIR(st.st_mode))
         return make_directory_resource(move(path), st.st_mtime);
+#else
+    TODO();
+#endif
 
     return make_resource(path, TRY(MappedFile::map(full_path)), st.st_mtime);
 }

@@ -13,7 +13,7 @@
 
 namespace JS {
 
-class GlobalObject : public Object {
+class LibJS_API GlobalObject : public Object {
     JS_OBJECT(GlobalObject, Object);
     JS_DECLARE_ALLOCATOR(GlobalObject);
 

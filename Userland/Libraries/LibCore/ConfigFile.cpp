@@ -11,8 +11,6 @@
 #include <LibCore/ConfigFile.h>
 #include <LibCore/Directory.h>
 #include <LibCore/StandardPaths.h>
-#include <LibCore/System.h>
-#include <pwd.h>
 #include <sys/types.h>
 
 namespace Core {
@@ -21,7 +19,7 @@ ErrorOr<NonnullRefPtr<ConfigFile>> ConfigFile::open_for_lib(ByteString const& li
 {
     ByteString directory_name = ByteString::formatted("{}/lib", StandardPaths::config_directory());
     auto directory = TRY(Directory::create(directory_name, Directory::CreateDirectories::Yes));
-    auto path = ByteString::formatted("{}/{}.ini", directory, lib_name);
+    auto path = ByteString::formatted("{}/{}.ini", directory_name, lib_name);
     return ConfigFile::open(path, allow_altering);
 }
 

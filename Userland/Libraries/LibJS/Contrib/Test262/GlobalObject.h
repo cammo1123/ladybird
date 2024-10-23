@@ -11,7 +11,7 @@
 
 namespace JS::Test262 {
 
-class GlobalObject final : public JS::GlobalObject {
+class LibJS_API GlobalObject final : public JS::GlobalObject {
     JS_OBJECT(GlobalObject, JS::GlobalObject);
     JS_DECLARE_ALLOCATOR(GlobalObject);
 

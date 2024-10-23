@@ -11,6 +11,7 @@
 
 #include <AK/ByteString.h>
 #include <AK/ScopeGuard.h>
+#include <AK/String.h>
 #include <LibCore/System.h>
 #include <WinSock2.h>
 #include <io.h>
@@ -86,6 +87,94 @@ ErrorOr<void> ioctl(int, unsigned, ...)
 {
     dbgln("Core::System::ioctl() is not implemented");
     VERIFY_NOT_REACHED();
+}
+
+ErrorOr<void> mkdir(StringView path, mode_t mode)
+{
+    (void) mode;
+    int res = CreateDirectory(path.to_byte_string().characters(), {});
+    if (res < 0)
+        return Error::from_windows_error(GetLastError());
+    return {};
+}
+
+ErrorOr<int> openat(int fd, StringView path, int options, mode_t mode)
+{
+    (void)fd;
+    (void)path;
+    (void)options;
+    (void)mode;
+    TODO();
+}
+
+ErrorOr<struct stat> fstatat(int fd, StringView path, int flags)
+{
+    (void)fd;
+    (void)path;
+    (void)flags;
+    TODO();
+}
+
+ErrorOr<int> mkstemp(Span<char> pattern)
+{
+    (void)pattern;
+    TODO();
+}
+
+ErrorOr<String> mkdtemp(Span<char> pattern)
+{
+    (void)pattern;
+    TODO();
+}
+
+ErrorOr<ByteString> getcwd()
+{
+    TODO();
+}
+
+ErrorOr<struct stat> stat(StringView path)
+{
+    (void) path;
+    TODO();
+}
+
+ErrorOr<void> link(StringView old_path, StringView new_path)
+{
+    (void) old_path;
+    (void) new_path;
+    TODO();
+}
+
+ErrorOr<void> symlink(StringView target, StringView link_path)
+{
+    (void) target;
+    (void) link_path;
+    TODO();
+}
+
+ErrorOr<void> rename(StringView old_path, StringView new_path)
+{
+    (void) old_path;
+    (void) new_path;
+    TODO();
+}
+
+ErrorOr<void> unlink(StringView path)
+{
+    (void) path;
+    TODO();
+}
+
+ErrorOr<void> rmdir(StringView path)
+{
+    (void) path;
+    TODO();
+}
+
+ErrorOr<ByteString> readlink(StringView pathname)
+{
+    (void) pathname;
+    TODO();
 }
 
 }

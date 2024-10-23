@@ -9,11 +9,19 @@
 
 #include <AK/IPv4Address.h>
 #include <AK/IPv6Address.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/un.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <arpa/inet.h>
+#    include <netinet/in.h>
+#    include <sys/socket.h>
+#    include <sys/un.h>
+#else
+#    include <afunix.h>
+#    include <windows.h>
+#    include <winsock2.h>
+#    include <ws2ipdef.h>
+#endif
 
 namespace Core {
 
@@ -86,7 +94,7 @@ public:
     {
         VERIFY(type() == Type::Local);
         sockaddr_un address;
-        address.sun_family = AF_LOCAL;
+        address.sun_family = AF_UNIX;
         bool fits = m_local_address.copy_characters_to_buffer(address.sun_path, sizeof(address.sun_path));
         if (!fits)
             return {};

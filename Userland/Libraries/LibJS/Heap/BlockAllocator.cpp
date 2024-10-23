@@ -9,11 +9,16 @@
 #include <AK/Vector.h>
 #include <LibJS/Heap/BlockAllocator.h>
 #include <LibJS/Heap/HeapBlock.h>
-#include <sys/mman.h>
 
 #ifdef HAS_ADDRESS_SANITIZER
 #    include <sanitizer/asan_interface.h>
 #    include <sanitizer/lsan_interface.h>
+#endif
+
+#if defined(AK_OS_WINDOWS)
+#    include <Windows.h>
+#else
+#    include <sys/mman.h>
 #endif
 
 #if defined(AK_OS_GNU_HURD) || (!defined(MADV_FREE) && !defined(MADV_DONTNEED))
@@ -26,8 +31,7 @@ BlockAllocator::~BlockAllocator()
 {
     for (auto* block : m_blocks) {
         ASAN_UNPOISON_MEMORY_REGION(block, HeapBlock::block_size);
-        if (munmap(block, HeapBlock::block_size) < 0) {
-            perror("munmap");
+        if (!VirtualFree(block, 0, MEM_RELEASE)) {
             VERIFY_NOT_REACHED();
         }
     }
@@ -44,8 +48,8 @@ void* BlockAllocator::allocate_block([[maybe_unused]] char const* name)
         return block;
     }
 
-    auto* block = (HeapBlock*)mmap(nullptr, HeapBlock::block_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    VERIFY(block != MAP_FAILED);
+    auto* block = (HeapBlock*)VirtualAlloc(nullptr, HeapBlock::block_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    VERIFY(block != nullptr);
     LSAN_REGISTER_ROOT_REGION(block, HeapBlock::block_size);
     return block;
 }
@@ -56,12 +60,7 @@ void BlockAllocator::deallocate_block(void* block)
 
 #if defined(USE_FALLBACK_BLOCK_DEALLOCATION)
     // If we can't use any of the nicer techniques, unmap and remap the block to return the physical pages while keeping the VM.
-    if (munmap(block, HeapBlock::block_size) < 0) {
-        perror("munmap");
-        VERIFY_NOT_REACHED();
-    }
-    if (mmap(block, HeapBlock::block_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0) != block) {
-        perror("mmap");
+    if (!VirtualFree(block, HeapBlock::block_size, MEM_DECOMMIT)) {
         VERIFY_NOT_REACHED();
     }
 #elif defined(MADV_FREE)

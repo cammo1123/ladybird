@@ -24,10 +24,13 @@
 #include <AK/Weakable.h>
 #include <LibCore/AnonymousBuffer.h>
 #include <LibCore/System.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <sched.h>
-#include <sys/mman.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <errno.h>
+#    include <fcntl.h>
+#    include <sched.h>
+#    include <sys/mman.h>
+#endif
 
 namespace Core {
 

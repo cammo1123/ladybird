@@ -32,31 +32,43 @@ if (LAGOM_TOOLS_ONLY)
 endif()
 
 set(SOURCES
-    AnonymousBuffer.cpp
-    Command.cpp
     ConfigFile.cpp
     DateTime.cpp
-    ElapsedTimer.cpp
-    Event.cpp
     EventLoop.cpp
     EventLoopImplementation.cpp
-    EventLoopImplementationUnix.cpp
     EventReceiver.cpp
-    MappedFile.cpp
-    MimeData.cpp
+    Event.cpp
+    ElapsedTimer.cpp
     Notifier.cpp
-    Process.cpp
-    Resource.cpp
-    ResourceImplementation.cpp
-    ResourceImplementationFile.cpp
-    SessionManagement.cpp
-    Socket.cpp
-    SystemServerTakeover.cpp
-    TCPServer.cpp
     ThreadEventQueue.cpp
-    Timer.cpp
-    UDPServer.cpp
 )
+
+if (NOT WIN32)
+    list(APPEND SOURCES
+        Command.cpp
+        MappedFile.cpp
+        SessionManagement.cpp
+        UDPServer.cpp
+        Resource.cpp
+        ResourceImplementation.cpp
+        ResourceImplementationFile.cpp
+        AnonymousBuffer.cpp
+        EventLoopImplementationUnix.cpp
+        TCPServer.cpp
+        Process.cpp
+        MimeData.cpp
+        Socket.cpp
+        SystemServerTakeover.cpp
+        Timer.cpp
+    )
+endif()
+
+if (WIN32)
+    list(APPEND SOURCES
+        EventLoopImplementationWindows.cpp
+    )
+endif()
+
 if (NOT WIN32 AND NOT EMSCRIPTEN)
     list(APPEND SOURCES LocalServer.cpp)
 endif()
@@ -74,7 +86,7 @@ elseif (APPLE AND NOT IOS)
         Platform/ProcessStatisticsMach.cpp
         TimeZoneWatcherMacOS.mm
     )
-else()
+elseif(NOT WIN32)
     list(APPEND SOURCES
         FileWatcherUnimplemented.cpp
         Platform/ProcessStatisticsUnimplemented.cpp
@@ -105,6 +117,14 @@ if (APPLE)
     target_link_libraries(LibCore PUBLIC "-framework Foundation")
     target_link_libraries(LibCore PUBLIC "-framework IOSurface")
     target_link_libraries(LibCore PUBLIC "-framework Metal")
+endif()
+
+if (WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    target_link_libraries(LibCore PUBLIC ws2_32.lib)
+
+    find_package(PThreads4W CONFIG REQUIRED)
+    target_link_libraries(LibCore PRIVATE PThreads4W::PThreads4W)
 endif()
 
 if (ANDROID)

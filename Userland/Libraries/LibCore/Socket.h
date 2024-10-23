@@ -333,9 +333,11 @@ public:
 
     ErrorOr<Bytes> receive_message(Bytes buffer, int flags, Vector<int>& fds);
     ErrorOr<ssize_t> send_message(ReadonlyBytes msg, int flags, Vector<int, 1> fds = {});
-
-    ErrorOr<pid_t> peer_pid() const;
     ErrorOr<Bytes> read_without_waiting(Bytes buffer);
+
+#if !defined(AK_OS_WINDOWS)
+    ErrorOr<pid_t> peer_pid() const;
+#endif
 
     /// Release the fd associated with this LocalSocket. After the fd is
     /// released, the socket will be considered "closed" and all operations done

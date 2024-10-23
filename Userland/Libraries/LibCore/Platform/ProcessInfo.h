@@ -10,6 +10,9 @@
 
 #if defined(AK_OS_MACH)
 #    include <LibCore/MachPort.h>
+#elif defined(AK_OS_WINDOWS)
+#    include <windows.h>
+#    define pid_t HANDLE
 #endif
 
 namespace Core::Platform {

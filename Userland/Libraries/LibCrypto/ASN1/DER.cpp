@@ -265,7 +265,11 @@ ErrorOr<void> Encoder::write_length(size_t value)
 
     double minimum_bits = AK::log2(value);
     size_t size_in_bits = AK::floor(minimum_bits) + 1;
+#if !defined(AK_OS_WINDOWS)
     size_t size = ceil_div(size_in_bits, 8ul);
+#else
+    size_t size = ceil_div(size_in_bits, 8ull);
+#endif
     TRY(write_byte(0x80 | size));
 
     for (size_t i = 0; i < size; i++) {
@@ -433,7 +437,11 @@ ErrorOr<void> Encoder::write_bit_string(BitStringView view, Optional<Class> clas
     auto total_size_in_bits = view.byte_length() * 8 - unused_bits;
 
     TRY(write_tag(class_, type, kind));
+#if !defined(AK_OS_WINDOWS)
     TRY(write_length(ceil_div(total_size_in_bits, 8ul) + 1));
+#else
+    TRY(write_length(ceil_div(total_size_in_bits, 8ull) + 1));
+#endif
     TRY(write_byte(unused_bits));
     return write_bytes(view.underlying_bytes());
 }

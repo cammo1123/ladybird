@@ -10,6 +10,10 @@
 #include <LibCore/Event.h>
 #include <LibCore/EventReceiver.h>
 
+#if defined(AK_OS_WINDOWS)
+#    define pthread_t int
+#endif
+
 namespace Core {
 
 class Notifier final : public EventReceiver {
