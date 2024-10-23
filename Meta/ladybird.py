@@ -322,7 +322,7 @@ def main():
         metavar="command",
     )
 
-    target_choices = ["ladybird", "js", "test-js"]
+    target_choices = ["ladybird", "js", "test-js", "test262-runner"]
     parser.add_argument(
         "target",
         type=str,
